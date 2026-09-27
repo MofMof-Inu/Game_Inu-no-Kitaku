@@ -14,7 +14,7 @@
 // 1. ゲームの基本設定
 // ============================================================
 
-const GAME_VERSION = "v0.1.70";
+const GAME_VERSION = "v0.1.71";
 const GAME_CONFIG = {
   // Canvasの大きさ
   width: 800,
@@ -84,9 +84,6 @@ const images = {
   houseClosed: loadImage("images/house_closed.png"),
   houseOpen: loadImage("images/house_open.png"),
   ending: loadImage("images/ending.png"),
-  credits: loadImage("images/credits.png"),
-  endingSleep: loadImage("images/ending_sleep.png"),
-  againBackground: loadImage("images/again_background.png")
 };
 
 function loadImage(path) {
@@ -125,10 +122,7 @@ const goalWaitDuration = 3000;
 // 7 = 扉まで歩く
 // 8 = 扉の前で停止（0.4秒）
 // 9 = 暗転
-// 10 = エンディング絵表示
-// 11 = クレジット絵表示
-// 12 = 「もう一度犬をお散歩に行かせる？」
-// 13 = 終了画面
+// 10 = エンディング絵表示 → ここで終了
 
 let goalPhase = 0;
 let goalPhaseTimer = 0;
@@ -326,26 +320,7 @@ document.addEventListener("keydown", (event) => {
     // ページがスクロールするのを防ぐ
     event.preventDefault();
 
-    // エンディング絵 → クレジット
-    if (goalPhase === 10) {
-      goalPhase = 11;
-      return;
-    }
-
-    // クレジット → 「もう一度？」画面
-    if (goalPhase === 11) {
-      goalPhase = 12;
-      return;
-    }
-
-    // 「もう一度？」画面では
-    // スペースでは選択しない
-  if (goalPhase === 12) {
-  event.preventDefault();
-  return;
-}
-
-    // それ以外は通常どおりジャンプ
+    // 通常どおりジャンプ
     jump();
   }
 });
@@ -357,108 +332,6 @@ document.addEventListener("keydown", (event) => {
 canvas.addEventListener("pointerdown", (event) => {
   event.preventDefault();
 
-  // エンディング絵表示中なら、クレジットへ
-  if (goalPhase === 10) {
-    goalPhase = 11;
-    return;
-  }
-
-  // クレジット表示中なら、「もう一度遊ぶ？」画面へ
-  if (goalPhase === 11) {
-    goalPhase = 12;
-    return;
-  }
-
-// 「もう一度遊ぶ？」画面
-if (goalPhase === 12) {
-
-  console.log("クリック時 goalPhase =", goalPhase);
-
-  // Canvasの表示サイズと内部サイズの違いを補正
-  const rect = canvas.getBoundingClientRect();
-
-  const x =
-    (event.clientX - rect.left) *
-    (GAME_CONFIG.width / rect.width);
-
-  const y =
-    (event.clientY - rect.top) *
-    (GAME_CONFIG.height / rect.height);
-
-
-  // Yes
-  if (
-    x >= 250 &&
-    x <= 400 &&
-    y >= 250 &&
-    y <= 320
-  ) {
-    // いったんゲームを完全に停止
-    gameState = "ready";
-
-    if (animationId !== null) {
-      cancelAnimationFrame(animationId);
-      animationId = null;
-    }
-
-    // ゲームの状態を最初に戻す
-    score = 0;
-    gameElapsedTime = 0;
-    gameSpeed = GAME_CONFIG.obstacleSpeed;
-
-    goalStarted = false;
-    goalWaiting = false;
-    goalWaitTimer = 0;
-
-    houseX = GAME_CONFIG.width;
-
-    goalPhase = 0;
-    goalPhaseTimer = 0;
-    goalPlayerTargetX = 0;
-
-    doorOpen = false;
-
-    // 犬を最初の位置に戻す
-    player.x = 100;
-    player.y = GAME_CONFIG.groundY - player.height;
-    player.velocityY = 0;
-    player.isJumping = false;
-    player.animationTimer = 0;
-    player.animationFrame = 0;
-
-    // 障害物も最初の状態に戻す
-    obstacles.length = 1;
-    obstacles[0].x = GAME_CONFIG.width + 100;
-    obstacles[0].width = 64;
-    obstacles[0].height = GAME_CONFIG.obstacleHeight;
-    obstacles[0].image = images.obstacle;
-    obstacles[0].y =
-      GAME_CONFIG.groundY - obstacles[0].height;
-
-    // 背景を最初に戻す
-    backgroundX = 0;
-
-    // 最初の画面を表示
-    drawInitialScreen();
-
-    return;
-  }
-
-
-  // No
-  if (
-    x >= 450 &&
-    x <= 600 &&
-    y >= 250 &&
-    y <= 320
-  ) {
-    goalPhase = 13;
-    return;
-  }
-
-  return;
-}
-  
   jump();
 });
 
@@ -474,7 +347,8 @@ function gameLoop(currentTime) {
   update(deltaTime);
   draw();
 
-  if (gameState === "playing") {
+  // エンディング表示まで到達したらゲームループ終了
+  if (gameState === "playing" && goalPhase < 10) {
     animationId = requestAnimationFrame(gameLoop);
   }
 }
@@ -720,18 +594,13 @@ else if (goalPhase === 9) {
 
   if (goalPhaseTimer >= goalBlackoutDuration) {
 
-    // 今はここで演出終了
-    // 後で「犬が家に入る」演出をここに追加する
+    // 暗転後、エンディング画像を表示して終了
     goalPhase = 10;
     goalPhaseTimer = 0;
   }
 }
-
 else if (goalPhase === 10) {
-  // エンディング絵を表示して待つ
-}
-else if (goalPhase === 11) {
-  // クレジット絵を表示して待つ
+  // エンディング画面で終了
 }
   
 // --------------------------------------------
@@ -961,25 +830,6 @@ function endGame() {
 // ============================================================
 
 function draw() {
-  if (goalPhase === 13) {
-    ctx.clearRect(
-      0,
-      0,
-      GAME_CONFIG.width,
-      GAME_CONFIG.height
-    );
-
-    ctx.drawImage(
-      images.endingSleep,
-      0,
-      0,
-      GAME_CONFIG.width,
-      GAME_CONFIG.height
-    );
-
-    return;
-  }
-
   drawBackground();
 
   for (const obstacle of obstacles) {
@@ -1064,64 +914,7 @@ if (goalPhase === 10) {
   );
 }
 
-// --------------------------------------------
-// クレジット画面
-// --------------------------------------------
-
-if (goalPhase === 11) {
-  ctx.drawImage(
-    images.credits,
-    0,
-    0,
-    GAME_CONFIG.width,
-    GAME_CONFIG.height
-  );
-}
-
-if (goalPhase === 12) {
-  ctx.drawImage(
-    images.againBackground,
-    0,
-    0,
-    GAME_CONFIG.width,
-    GAME_CONFIG.height
-  );
-
-  ctx.fillStyle = "black";
-  ctx.font = "28px sans-serif";
-  ctx.textAlign = "center";
-
-  ctx.fillText(
-    "もう一度犬をお散歩に行かせる？",
-    GAME_CONFIG.width / 2,
-    180
-  );
-
-  ctx.font = "24px sans-serif";
-
-  ctx.fillText(
-    "Yes",
-    325,
-    285
-  );
-
-  ctx.fillText(
-    "No",
-    525,
-    285
-  );
-
-  ctx.textAlign = "left";
-}
-
-  
-// 開発用バージョン表示
-ctx.fillStyle = "black";
-ctx.font = "14px sans-serif";
-ctx.fillText(GAME_VERSION, 10, 20);
-
-}
-
+} // ← draw() を閉じる
 
 // ============================================================
 // 17. 背景描画
