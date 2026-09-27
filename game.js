@@ -14,7 +14,7 @@
 // 1. ゲームの基本設定
 // ============================================================
 
-const GAME_VERSION = "v0.1.71";
+const GAME_VERSION = "v0.1.72";
 const GAME_CONFIG = {
   // Canvasの大きさ
   width: 800,
@@ -329,12 +329,12 @@ document.addEventListener("keydown", (event) => {
 // 11. スマートフォン・マウス操作
 // ============================================================
 
-canvas.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-
-  jump();
+document.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "touch") {
+    event.preventDefault();
+    jump();
+  }
 });
-
 
 // ============================================================
 // 12. ゲームループ
