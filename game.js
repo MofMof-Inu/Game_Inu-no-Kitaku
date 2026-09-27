@@ -14,7 +14,7 @@
 // 1. ゲームの基本設定
 // ============================================================
 
-const GAME_VERSION = "v0.1.72";
+const GAME_VERSION = "v0.1.73";
 const GAME_CONFIG = {
   // Canvasの大きさ
   width: 800,
@@ -913,6 +913,14 @@ if (goalPhase === 10) {
     GAME_CONFIG.height
   );
 }
+
+// --------------------------------------------
+// 開発用バージョン表示
+// --------------------------------------------
+
+ctx.fillStyle = "black";
+ctx.font = "14px sans-serif";
+ctx.fillText(GAME_VERSION, 10, 20);
 
 } // ← draw() を閉じる
 
